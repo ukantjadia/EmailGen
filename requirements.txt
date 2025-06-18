@@ -1,0 +1,33 @@
+# Web scraping and parsing
+flask
+pandas
+playwright
+openai
+playwright-stealth
+seleniumbase==4.21.3
+beautifulsoup4
+html5lib==1.1
+newspaper3k==0.2.8
+GoogleNews==1.6.8
+wikipedia==1.4.0
+
+# Transformers and sentence embeddings
+transformers==4.41.2
+sentence-transformers==2.6.1
+torch>=1.10
+scipy==1.13.0
+numpy==1.26.4
+
+# FastAPI backend
+fastapi==0.111.0
+uvicorn==0.30.1
+pydantic==2.7.1
+
+# Groq API client
+groq
+
+# Miscellaneous
+requests
+python-dotenv==1.0.1
+
+lxml_html_clean
