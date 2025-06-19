@@ -5,7 +5,7 @@ playwright
 openai
 playwright-stealth
 parsel
-seleniumbase==4.21.3
+seleniumbase
 beautifulsoup4
 html5lib==1.1
 newspaper3k==0.2.8
