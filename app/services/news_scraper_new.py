@@ -86,18 +86,19 @@ class AsyncCompanyScraper:
         query = quote_plus(f"{company_name} {location}")
 
         query_variants = [
-            [  # Recent News
-                f'{query} recent news',
+            [  # Simple News Queries
+                f'{query} news',
                 f'{query} latest news',
-                f'{query} news updates',
-                f'recent developments {query}',
-                f'latest updates about {query}'
+                f'{query} recent news',
+                f'{query} management change',
+                f'{query} board member change',
+                f'{query} new product',
+                f'{query} new important person',
+                f'{query} investment',
             ],
-            [  # News from past year
-                f'{query} news past year',
-                f'{query} news last 12 months',
-                f'{query} developments 2023',
-                f'{query} updates 2023-2024'
+            [  # Simple Past Year News Queries
+                f'{query} news 2023',
+                f'{query} news 2024',
             ],
         ]
 
@@ -120,7 +121,23 @@ class AsyncCompanyScraper:
 
         news_text = texts[0]+texts[1] if len(texts) > 0 else "No news data"
 
-        prompt = f"Extract the most recent news about {company_name} in {location} using this information: {news_text}. Provide a summary of 2-3 key news items from the past year, each in one sentence. Only use information actually present in the text."
+        prompt = f"""
+You are an intelligent extraction agent. Your job is to analyze raw text scraped from search engines about the company '{company_name}' in '{location}'.
+
+Extract the following information, using ONLY what is actually present in the text:
+- A concise company description or overview
+- Headquarters location (city, region, country if possible)
+- List of founders (names)
+- Industry categories
+- 2-3 recent news items (each as a one-sentence summary, with date/source if possible)
+
+If any field is missing or uncertain, return only the text: Not Found for that field.
+
+Format your answer as clear, labeled sections. The extracted information will be used to write a personalized, engaging investor outreach email to the company.
+
+# Here is the text to analyze:
+# {texts[0]+texts[1] if len(texts) > 0 else 'No news data'}
+"""
 
         news_summary = await self.get_chat_response(prompt)
 
@@ -129,95 +146,98 @@ class AsyncCompanyScraper:
             "Recent News": news_summary if news_summary else "Not Found",
         }
 
-    async def save(self, df, folder='../data'):
-        os.makedirs(folder, exist_ok=True)
-        df = pd.DataFrame([df])
+    # async def save(self, df, folder='../data'):
+    #     os.makedirs(folder, exist_ok=True)
+    #     df = pd.DataFrame([df])
 
-        # Set file paths
-        csv_path = os.path.join(folder, 'company_news.csv')
-        excel_path = os.path.join(folder, 'company_news.xlsx')
+    #     # Set file paths
+    #     csv_path = os.path.join(folder, 'company_news.csv')
+    #     excel_path = os.path.join(folder, 'company_news.xlsx')
 
-        if os.path.exists(csv_path):
-            data = pd.read_csv(csv_path)
-            data = pd.concat([data, df], axis=0).reset_index(drop=True)
-            data.to_csv(csv_path, index=False)
-            data.to_excel(excel_path, index=False)
-        else:
-            df.to_csv(csv_path, index=False)
-            df.to_excel(excel_path, index=False)
+    #     if os.path.exists(csv_path):
+    #         data = pd.read_csv(csv_path)
+    #         data = pd.concat([data, df], axis=0).reset_index(drop=True)
+    #         data.to_csv(csv_path, index=False)
+    #         data.to_excel(excel_path, index=False)
+    #     else:
+    #         df.to_csv(csv_path, index=False)
+    #         df.to_excel(excel_path, index=False)
 
-    async def combine_leads(self, df, leads, folder='../data'):
-        os.makedirs(folder, exist_ok=True)
-        df = pd.read_csv(folder + '/' + df)
-        leads = pd.read_csv(folder + '/' + leads)
+    # async def combine_leads(self, df, leads, folder='../data'):
+    #     os.makedirs(folder, exist_ok=True)
+    #     df = pd.read_csv(folder + '/' + df)
+    #     leads = pd.read_csv(folder + '/' + leads)
 
-        combined_leads = pd.merge(leads, df, on='Name', how='left')
+    #     combined_leads = pd.merge(leads, df, on='Name', how='left')
 
-        # Set file paths
-        csv_path = os.path.join(folder, 'new_leads.csv')
-        excel_path = os.path.join(folder, 'new_leads.xlsx')
+    #     # Set file paths
+    #     csv_path = os.path.join(folder, 'new_leads.csv')
+    #     excel_path = os.path.join(folder, 'new_leads.xlsx')
 
-        combined_leads.to_csv(csv_path, index=False)
-        combined_leads.to_excel(excel_path, index=False)
+    #     combined_leads.to_csv(csv_path, index=False)
+    #     combined_leads.to_excel(excel_path, index=False)
 
-    async def process_all_companies(self, companies: list[dict], location: str) -> list[dict]:
-        semaphore = asyncio.Semaphore(3)
-        processed_companies = []
+    # async def process_all_companies(self, companies: list[dict], location: str) -> list[dict]:
+    #     semaphore = asyncio.Semaphore(3)
+    #     processed_companies = []
 
-        user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_16) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 OPR/45.0.2552.888',
-            'Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.210 Mobile Safari/537.36',
-            'Mozilla/5.0 (Android 10; Mobile; rv:89.0) Gecko/89.0 Firefox/89.0',
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_4_2 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/537.36',
-            'Mozilla/5.0 (Android 10; Mobile; rv:91.0) Gecko/91.0 Firefox/91.0 Edge/91.0.864.48',
-            'Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Mobile Safari/537.36 OPR/58.0.2875.157',
-            'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:39.0) Gecko/20100101 Firefox/39.0'
-        ]
+    #     user_agents = [
+    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+    #         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_16) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Safari/537.36',
+    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62',
+    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 OPR/45.0.2552.888',
+    #         'Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.210 Mobile Safari/537.36',
+    #         'Mozilla/5.0 (Android 10; Mobile; rv:89.0) Gecko/89.0 Firefox/89.0',
+    #         'Mozilla/5.0 (iPhone; CPU iPhone OS 14_4_2 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/537.36',
+    #         'Mozilla/5.0 (Android 10; Mobile; rv:91.0) Gecko/91.0 Firefox/91.0 Edge/91.0.864.48',
+    #         'Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Mobile Safari/537.36 OPR/58.0.2875.157',
+    #         'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0',
+    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
+    #         'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:39.0) Gecko/20100101 Firefox/39.0'
+    #     ]
 
-        await self.manager.start_browser(stealth_on=True)
-        contexts = []
-        for i in range(3):
-            user_agent = random.choice(user_agents)
-            context = await self.manager.browser.new_context(user_agent=user_agent)
-            contexts.append(context)
+    #     await self.manager.start_browser(stealth_on=True)
+    #     contexts = []
+    #     for i in range(3):
+    #         user_agent = random.choice(user_agents)
+    #         context = await self.manager.browser.new_context(user_agent=user_agent)
+    #         contexts.append(context)
 
-        async def process_with_semaphore(company, context):
-            async with semaphore:
-                name = company.get("Company", "NA")
-                result = await self.process_company(name, location)
-                return {**company, **result}
+    #     async def process_with_semaphore(company, context):
+    #         async with semaphore:
+    #             name = company.get("Company", "NA")
+    #             result = await self.process_company(name, location)
+    #             return {**company, **result}
 
-        tasks = []
-        for i, company in enumerate(companies):
-            context = contexts[i % 3]  # round-robin assignment
-            tasks.append(asyncio.create_task(process_with_semaphore(company, context)))
+    #     tasks = []
+    #     for i, company in enumerate(companies):
+    #         context = contexts[i % 3]  # round-robin assignment
+    #         tasks.append(asyncio.create_task(process_with_semaphore(company, context)))
 
-        processed_companies = await asyncio.gather(*tasks)
+    #     processed_companies = await asyncio.gather(*tasks)
 
-        for context in contexts:
-            await context.close()
-        await self.manager.stop_browser()
+    #     for context in contexts:
+    #         await context.close()
+    #     await self.manager.stop_browser()
 
-        return processed_companies
+    #     return processed_companies
 
 
 # This is the function you will call from your pipeline
 def scrape_and_save_news(company_name, location, json_path, api_key):
     scraper = AsyncCompanyScraper(api_key=api_key)
+    print("ino the scrap func... ")
     result = asyncio.run(scraper.process_company(company_name, location))
+
     # Save or merge with existing JSON
     if os.path.exists(json_path):
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
     else:
         data = {}
-    data["news_summary"] = result["Recent News"]
+    # Append or update the news data under the company name
+    data[company_name] = result["Recent News"]
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"[✅ Success] News summary for {company_name} saved to {json_path}")
