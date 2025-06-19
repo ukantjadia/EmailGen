@@ -1,13 +1,13 @@
 from app.services.crunchbase_scrape import fetch_crunchbase_data
 from app.services.founder_scrape import get_founders_info_and_save
-# from app.services.news_scraper_new import scrape_and_save_news
+from app.services.news_scraper_new import scrape_and_save_news
 from app.services.hybrid_pipeline import generate_email
 from app.utils.config import JSON_FILE, EMBEDDINGS_PATH
 
 def run_pipeline(company_name, json_file=JSON_FILE, embeddings_path=EMBEDDINGS_PATH):
     fetch_crunchbase_data(company_name, json_file)
+    scrape_and_save_news(company_name, "Redmond, Washington", json_file, "sk-")
     get_founders_info_and_save(json_file)
-    # scrape_and_save_news(company_name, "Redmond, Washington", json_file, "sk-")
     return generate_email(json_file, embeddings_path)
 
 if __name__ == "__main__":

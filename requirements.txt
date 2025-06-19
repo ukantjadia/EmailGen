@@ -4,6 +4,7 @@ pandas
 playwright
 openai
 playwright-stealth
+parsel
 seleniumbase==4.21.3
 beautifulsoup4
 html5lib==1.1
