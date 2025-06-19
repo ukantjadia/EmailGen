@@ -96,10 +96,10 @@ class AsyncCompanyScraper:
                 f'{query} new important person',
                 f'{query} investment',
             ],
-            [  # Simple Past Year News Queries
-                f'{query} news 2023',
-                f'{query} news 2024',
-            ],
+            # [  # Simple Past Year News Queries
+            #     f'{query} news 2023',
+            #     f'{query} news 2024',
+            # ],
         ]
 
         urls = [f'https://www.bing.com/search?q={random.choice(group)}' for group in query_variants]
@@ -129,7 +129,7 @@ Extract the following information, using ONLY what is actually present in the te
 - Headquarters location (city, region, country if possible)
 - List of founders (names)
 - Industry categories
-- 2-3 recent news items (each as a one-sentence summary, with date/source if possible)
+- 5 recent news items in to complete details (with date/source if possible)
 
 If any field is missing or uncertain, return only the text: Not Found for that field.
 
