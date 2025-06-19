@@ -87,14 +87,14 @@ class AsyncCompanyScraper:
 
         query_variants = [
             [  # Simple News Queries
-                f'{query} news',
+                # f'{query} news',
                 f'{query} latest news',
                 f'{query} recent news',
                 f'{query} management change',
                 f'{query} board member change',
-                f'{query} new product',
-                f'{query} new important person',
-                f'{query} investment',
+                # f'{query} new product',
+                # f'{query} new important person',
+                # f'{query} investment',
             ],
             # [  # Simple Past Year News Queries
             #     f'{query} news 2023',
@@ -119,7 +119,13 @@ class AsyncCompanyScraper:
 
         print(f"Total texts extracted: {len(texts)}")
 
-        news_text = texts[0]+texts[1] if len(texts) > 0 else "No news data"
+        if len(texts) >= 2:
+            news_text = texts[0] + texts[1]
+        elif len(texts) == 1:
+            news_text = texts[0]
+        else:
+            news_text = "No news data"
+        print("88888888",news_text)
 
         prompt = f"""
 You are an intelligent extraction agent. Your job is to analyze raw text scraped from search engines about the company '{company_name}' in '{location}'.
@@ -135,8 +141,8 @@ If any field is missing or uncertain, return only the text: Not Found for that f
 
 Format your answer as clear, labeled sections. The extracted information will be used to write a personalized, engaging investor outreach email to the company.
 
-# Here is the text to analyze:
-# {texts[0]+texts[1] if len(texts) > 0 else 'No news data'}
+# Here is the text to analyze:image.png
+{news_text}
 """
 
         news_summary = await self.get_chat_response(prompt)
