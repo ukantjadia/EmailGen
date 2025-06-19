@@ -135,7 +135,7 @@ Extract the following information, using ONLY what is actually present in the te
 - Headquarters location (city, region, country if possible)
 - List of founders (names)
 - Industry categories
-- 5 recent news items in to complete details (with date/source if possible)
+- 5 recent news items in to complete details only give news of 2025, or before July 2024 (with date/source if possible)
 
 If any field is missing or uncertain, return only the text: Not Found for that field.
 
@@ -152,82 +152,82 @@ Format your answer as clear, labeled sections. The extracted information will be
             "Recent News": news_summary if news_summary else "Not Found",
         }
 
-    # async def save(self, df, folder='../data'):
-    #     os.makedirs(folder, exist_ok=True)
-    #     df = pd.DataFrame([df])
+    async def save(self, df, folder='../data'):
+        os.makedirs(folder, exist_ok=True)
+        df = pd.DataFrame([df])
 
-    #     # Set file paths
-    #     csv_path = os.path.join(folder, 'company_news.csv')
-    #     excel_path = os.path.join(folder, 'company_news.xlsx')
+        # Set file paths
+        csv_path = os.path.join(folder, 'company_news.csv')
+        excel_path = os.path.join(folder, 'company_news.xlsx')
 
-    #     if os.path.exists(csv_path):
-    #         data = pd.read_csv(csv_path)
-    #         data = pd.concat([data, df], axis=0).reset_index(drop=True)
-    #         data.to_csv(csv_path, index=False)
-    #         data.to_excel(excel_path, index=False)
-    #     else:
-    #         df.to_csv(csv_path, index=False)
-    #         df.to_excel(excel_path, index=False)
+        if os.path.exists(csv_path):
+            data = pd.read_csv(csv_path)
+            data = pd.concat([data, df], axis=0).reset_index(drop=True)
+            data.to_csv(csv_path, index=False)
+            data.to_excel(excel_path, index=False)
+        else:
+            df.to_csv(csv_path, index=False)
+            df.to_excel(excel_path, index=False)
 
-    # async def combine_leads(self, df, leads, folder='../data'):
-    #     os.makedirs(folder, exist_ok=True)
-    #     df = pd.read_csv(folder + '/' + df)
-    #     leads = pd.read_csv(folder + '/' + leads)
+    async def combine_leads(self, df, leads, folder='../data'):
+        os.makedirs(folder, exist_ok=True)
+        df = pd.read_csv(folder + '/' + df)
+        leads = pd.read_csv(folder + '/' + leads)
 
-    #     combined_leads = pd.merge(leads, df, on='Name', how='left')
+        combined_leads = pd.merge(leads, df, on='Name', how='left')
 
-    #     # Set file paths
-    #     csv_path = os.path.join(folder, 'new_leads.csv')
-    #     excel_path = os.path.join(folder, 'new_leads.xlsx')
+        # Set file paths
+        csv_path = os.path.join(folder, 'new_leads.csv')
+        excel_path = os.path.join(folder, 'new_leads.xlsx')
 
-    #     combined_leads.to_csv(csv_path, index=False)
-    #     combined_leads.to_excel(excel_path, index=False)
+        combined_leads.to_csv(csv_path, index=False)
+        combined_leads.to_excel(excel_path, index=False)
 
-    # async def process_all_companies(self, companies: list[dict], location: str) -> list[dict]:
-    #     semaphore = asyncio.Semaphore(3)
-    #     processed_companies = []
+    async def process_all_companies(self, companies: list[dict], location: str) -> list[dict]:
+        semaphore = asyncio.Semaphore(3)
+        processed_companies = []
 
-    #     user_agents = [
-    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
-    #         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_16) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Safari/537.36',
-    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62',
-    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 OPR/45.0.2552.888',
-    #         'Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.210 Mobile Safari/537.36',
-    #         'Mozilla/5.0 (Android 10; Mobile; rv:89.0) Gecko/89.0 Firefox/89.0',
-    #         'Mozilla/5.0 (iPhone; CPU iPhone OS 14_4_2 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/537.36',
-    #         'Mozilla/5.0 (Android 10; Mobile; rv:91.0) Gecko/91.0 Firefox/91.0 Edge/91.0.864.48',
-    #         'Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Mobile Safari/537.36 OPR/58.0.2875.157',
-    #         'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0',
-    #         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
-    #         'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:39.0) Gecko/20100101 Firefox/39.0'
-    #     ]
+        user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_16) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.62',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 OPR/45.0.2552.888',
+            'Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.210 Mobile Safari/537.36',
+            'Mozilla/5.0 (Android 10; Mobile; rv:89.0) Gecko/89.0 Firefox/89.0',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_4_2 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/537.36',
+            'Mozilla/5.0 (Android 10; Mobile; rv:91.0) Gecko/91.0 Firefox/91.0 Edge/91.0.864.48',
+            'Mozilla/5.0 (Linux; Android 10; Pixel 4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Mobile Safari/537.36 OPR/58.0.2875.157',
+            'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:39.0) Gecko/20100101 Firefox/39.0'
+        ]
 
-    #     await self.manager.start_browser(stealth_on=True)
-    #     contexts = []
-    #     for i in range(3):
-    #         user_agent = random.choice(user_agents)
-    #         context = await self.manager.browser.new_context(user_agent=user_agent)
-    #         contexts.append(context)
+        await self.manager.start_browser(stealth_on=True)
+        contexts = []
+        for i in range(3):
+            user_agent = random.choice(user_agents)
+            context = await self.manager.browser.new_context(user_agent=user_agent)
+            contexts.append(context)
 
-    #     async def process_with_semaphore(company, context):
-    #         async with semaphore:
-    #             name = company.get("Company", "NA")
-    #             result = await self.process_company(name, location)
-    #             return {**company, **result}
+        async def process_with_semaphore(company, context):
+            async with semaphore:
+                name = company.get("Company", "NA")
+                result = await self.process_company(name, location)
+                return {**company, **result}
 
-    #     tasks = []
-    #     for i, company in enumerate(companies):
-    #         context = contexts[i % 3]  # round-robin assignment
-    #         tasks.append(asyncio.create_task(process_with_semaphore(company, context)))
+        tasks = []
+        for i, company in enumerate(companies):
+            context = contexts[i % 3]  # round-robin assignment
+            tasks.append(asyncio.create_task(process_with_semaphore(company, context)))
 
-    #     processed_companies = await asyncio.gather(*tasks)
+        processed_companies = await asyncio.gather(*tasks)
 
-    #     for context in contexts:
-    #         await context.close()
-    #     await self.manager.stop_browser()
+        for context in contexts:
+            await context.close()
+        await self.manager.stop_browser()
 
-    #     return processed_companies
+        return processed_companies
 
 
 # This is the function you will call from your pipeline
