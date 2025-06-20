@@ -29,8 +29,8 @@ class AsyncCompanyScraper:
     async def fetch_page_text(self, page, url):
         try:
             await asyncio.sleep(random.uniform(1, 3))
-            await page.goto(url, timeout=30000)  # 30 seconds
-            await page.wait_for_timeout(30000)   # 30 seconds
+            await page.goto(url, timeout=180000)  # 3 minutes
+            await page.wait_for_timeout(180000)   # 3 minutes
             await page.evaluate("""
             const contentDiv = document.querySelector('#b_content');
             if (contentDiv && contentDiv.style.visibility === 'hidden') {

@@ -7,10 +7,14 @@ from app.utils.config import JSON_FILE, EMBEDDINGS_PATH, SEARCH_FILE
 
 def run_pipeline(company_name, json_file=JSON_FILE, embeddings_path=EMBEDDINGS_PATH, website_url=None, api_key="sk-"):
     # Optionally scrape website info if website_url is provided
+    canonical_name = company_name
     if website_url:
-        scrape_and_save_website(company_name, website_url, json_file, api_key)
-    # Continue with news scraping
-    scrape_and_save_news(company_name, "", json_file, api_key)
+        result = scrape_and_save_website(company_name, website_url, json_file, api_key)
+        # Try to get the canonical name from the website scraper result
+        if result and result.get("company_name"):
+            canonical_name = result["company_name"]
+    # Continue with news scraping using the canonical name
+    scrape_and_save_news(canonical_name, "", json_file, api_key)
     return generate_email(json_file, embeddings_path)
 
 if __name__ == "__main__":
