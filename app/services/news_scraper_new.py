@@ -156,19 +156,26 @@ Format your answer as a JSON object with the following structure:
 }}
 
 The extracted information will be used to write a personalized, engaging investor outreach email to the company.
-
+Return ONLY the JSON object, with no extra text, markdown, or explanation.
 # Here is the text to analyze:
 {news_text}
 """
 
         news_summary = await self.get_chat_response(prompt)
         print(f'-------{news_summary}')
+        # After getting news_summary from the LLM
+        news_summary = news_summary.strip()
+        # Remove markdown code block if present
+        if news_summary.startswith("```"):
+            news_summary = re.sub(r"^```[a-zA-Z]*\\n?", "", news_summary)
+            news_summary = news_summary.rstrip("`").strip()
         # Try to parse the LLM output as JSON
         import json as _json
         try:
             parsed = _json.loads(news_summary)
         except Exception as e:
             print(f"[Error] LLM output is not valid JSON: {e}")
+            print(f"[Error] Raw LLM output: {news_summary}")
             parsed = {company_name: news_summary if news_summary else "Not Found"}
         return parsed
 
