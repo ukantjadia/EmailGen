@@ -135,11 +135,27 @@ Extract the following information, using ONLY what is actually present in the te
 - Headquarters location (city, region, country if possible)
 - List of founders (names)
 - Industry categories
-- 5 recent news items in to complete details only give news of 2025, or before July 2024 (with date/source if possible)
+- 5 recent news items in complete details only give news of 2025, or before July 2024 (with date/source if possible)
 
 If any field is missing or uncertain, return only the text: Not Found for that field.
 
-Format your answer as clear, labeled sections. The extracted information will be used to write a personalized, engaging investor outreach email to the company.
+Format your answer as a JSON object with the following structure:
+{
+  "company_name": "...",
+  "description": "...",
+  "company_overview": "...",
+  "headquarters_location": "...",
+  "founder_names": ["..."],
+  "industry_categories": ["..."],
+  "news": [
+    {"date": "...", "source": "...", "title": "...", "url": "..."},
+    ...
+  ],
+  "news_summary": "...",
+  "website_summary": "..."
+}
+
+The extracted information will be used to write a personalized, engaging investor outreach email to the company.
 
 # Here is the text to analyze:
 {news_text}
@@ -147,10 +163,14 @@ Format your answer as clear, labeled sections. The extracted information will be
 
         news_summary = await self.get_chat_response(prompt)
         print(f'-------{news_summary}')
-        return {
-            "Company": company_name,
-            "Recent News": news_summary if news_summary else "Not Found",
-        }
+        # Try to parse the LLM output as JSON
+        import json as _json
+        try:
+            parsed = _json.loads(news_summary)
+        except Exception as e:
+            print(f"[Error] LLM output is not valid JSON: {e}")
+            parsed = {company_name: news_summary if news_summary else "Not Found"}
+        return parsed
 
     async def save(self, df, folder='../data'):
         os.makedirs(folder, exist_ok=True)
@@ -236,15 +256,24 @@ def scrape_and_save_news(company_name, location, json_path, api_key):
     print("ino the scrap func... ")
     result = asyncio.run(scraper.process_company(company_name, location))
 
-    # Save or merge with existing JSON
-    if os.path.exists(json_path):
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+    # If result is a valid dict with the expected keys, save it under the company name
+    if isinstance(result, dict) and "company_name" in result:
+        # Load existing data if file exists
+        if os.path.exists(json_path):
+            with open(json_path, "r", encoding="utf-8") as f:
+                try:
+                    all_data = json.load(f)
+                except Exception:
+                    all_data = {}
+        else:
+            all_data = {}
+        # Use the company_name as the key
+        key = result["company_name"] or company_name
+        all_data[key] = result
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(all_data, f, indent=2, ensure_ascii=False)
+        print(f"[✅ Success] News and company info for {key} saved to {json_path}")
+        return result
     else:
-        data = {}
-    # Append or update the news data under the company name
-    data[company_name] = result["Recent News"]
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    print(f"[✅ Success] News summary for {company_name} saved to {json_path}")
-    return result["Recent News"]
+        print(f"[❌ Error] LLM output was not valid JSON or missing expected keys. Not saving to {json_path}.")
+        return result

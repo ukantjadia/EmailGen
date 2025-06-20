@@ -2,16 +2,16 @@ from app.services.crunch_playwright import scrape_and_save_crunchbase_sync
 from app.services.founder_scrape import get_founders_info_and_save
 from app.services.news_scraper_new import scrape_and_save_news
 from app.services.hybrid_pipeline import generate_email
+from app.services.website_scrape import scrape_and_save_website
 from app.utils.config import JSON_FILE, EMBEDDINGS_PATH, SEARCH_FILE
 
-def run_pipeline(company_name, json_file=JSON_FILE, embeddings_path=EMBEDDINGS_PATH):
-    # Build Crunchbase URL from company name
-    # crunchbase_url = f"https://www.crunchbase.com/organization/{company_name.lower().replace(' ', '-')}"
-    # Scrape company details and save to json_file
-    # scrape_and_save_crunchbase_sync(crunchbase_url, json_file)
-    # Optionally, you can also call get_founders_info_and_save(json_file) here if needed
-    scrape_and_save_news(company_name, "", SEARCH_FILE, "sk-")
-    return generate_email(SEARCH_FILE, embeddings_path)
+def run_pipeline(company_name, json_file=JSON_FILE, embeddings_path=EMBEDDINGS_PATH, website_url=None, api_key="sk-"):
+    # Optionally scrape website info if website_url is provided
+    if website_url:
+        scrape_and_save_website(company_name, website_url, json_file, api_key)
+    # Continue with news scraping
+    scrape_and_save_news(company_name, "", json_file, api_key)
+    return generate_email(json_file, embeddings_path)
 
 if __name__ == "__main__":
     run_pipeline()
