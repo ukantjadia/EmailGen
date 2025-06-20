@@ -256,14 +256,42 @@ Return ONLY the JSON object, with no extra text, markdown, or explanation.
 
         return processed_companies
 
+def merge_company_data(existing, new):
+    # Merge string fields: if both exist and are different, concatenate
+    for key in ["description", "company_overview", "headquarters_location", "news_summary", "website_summary"]:
+        old = existing.get(key, "")
+        new_val = new.get(key, "")
+        if old and new_val and old != new_val:
+            existing[key] = f"{old}\n---\n{new_val}"
+        elif new_val:
+            existing[key] = new_val
+    # Merge lists: founders, news, industries
+    for key in ["founder_names", "industry_categories"]:
+        old = set(existing.get(key, []))
+        new_items = set(new.get(key, []))
+        merged = list(old.union(new_items))
+        existing[key] = merged
+    # For news, merge by unique (title, url)
+    if "news" in new:
+        old_news = existing.get("news", [])
+        old_set = {(n.get("title"), n.get("url")) for n in old_news}
+        for n in new["news"]:
+            if (n.get("title"), n.get("url")) not in old_set:
+                old_news.append(n)
+        existing["news"] = old_news
+    # For all other fields, update if not present
+    for key, value in new.items():
+        if key not in existing or not existing[key]:
+            existing[key] = value
+    return existing
 
-# This is the function you will call from your pipeline
 def scrape_and_save_news(company_name, location, json_path, api_key):
+    from .news_scraper_new import AsyncCompanyScraper
     scraper = AsyncCompanyScraper(api_key=api_key)
     print("ino the scrap func... ")
     result = asyncio.run(scraper.process_company(company_name, location))
 
-    # If result is a valid dict with the expected keys, save it under the company name
+    # If result is a valid dict with the expected keys, merge and save it under the company name
     if isinstance(result, dict) and "company_name" in result:
         # Load existing data if file exists
         if os.path.exists(json_path):
@@ -276,7 +304,10 @@ def scrape_and_save_news(company_name, location, json_path, api_key):
             all_data = {}
         # Use the company_name as the key
         key = result["company_name"] or company_name
-        all_data[key] = result
+        if key not in all_data:
+            all_data[key] = {}
+        # Merge new data with existing data for the company
+        all_data[key] = merge_company_data(all_data[key], result)
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(all_data, f, indent=2, ensure_ascii=False)
         print(f"[✅ Success] News and company info for {key} saved to {json_path}")

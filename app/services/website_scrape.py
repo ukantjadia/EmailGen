@@ -8,7 +8,7 @@ import re
 
 def merge_company_data(existing, new):
     # Merge string fields: if both exist and are different, concatenate
-    for key in ["description", "company_overview", "headquarters_location", "news_summary", "website_summary"]:
+    for key in ["description", "company_overview", "headquarters_location", "news_summary", "website_summary", "about_content", "news_content", "staff_content"]:
         old = existing.get(key, "")
         new_val = new.get(key, "")
         if old and new_val and old != new_val:
@@ -101,15 +101,12 @@ HTML to analyze:
             summary_json = {}
         return summary_json
 
-    async def extract_from_url(self, url, company_name, field):
+    async def extract_content_from_url(self, url, company_name, field):
         html = await self.fetch_page_html(url)
         prompt = f"""
 You are an intelligent extraction agent. Analyze the following HTML content from the {field} page of '{company_name}'.
-Extract and return ONLY a JSON object with these fields:
-- founders (as a list, if staff/leaders page)
-- news (as a list of objects with date, title, url, if news/blog page)
-If a field is missing, use 'Not Found'.
-Return ONLY the JSON object, with no extra text, markdown, or explanation.
+Extract and return ONLY the main content of this page as a string (summarized if needed). If not found, return 'Not Found'.
+Return ONLY the content string, with no extra text, markdown, or explanation.
 
 HTML to analyze:
 {html}
@@ -124,18 +121,12 @@ HTML to analyze:
                 stream=False
             )
             return response.choices[0].message.content
-        summary = await asyncio.to_thread(sync_chat_request)
-        summary = summary.strip()
-        if summary.startswith("```"):
-            summary = re.sub(r"^```[a-zA-Z]*\n?", "", summary)
-            summary = summary.rstrip("`").strip()
-        try:
-            summary_json = json.loads(summary)
-        except Exception as e:
-            print(f"[WebsiteScraper] LLM output not valid JSON: {e}")
-            print(f"[WebsiteScraper] Raw LLM output: {summary}")
-            summary_json = {}
-        return summary_json
+        content = await asyncio.to_thread(sync_chat_request)
+        content = content.strip()
+        if content.startswith("```"):
+            content = re.sub(r"^```[a-zA-Z]*\n?", "", content)
+            content = content.rstrip("`").strip()
+        return content
 
     async def summarize_website(self, company_name, website_url):
         print(f"[WebsiteScraper] Fetching main page: {website_url}")
@@ -157,20 +148,23 @@ HTML to analyze:
         about_url = main_info.get("about_url")
         news_url = main_info.get("news_url")
         staff_url = main_info.get("staff_url")
-        # Extract founders from staff/leaders page
-        if staff_url and staff_url != 'Not Found':
-            print(f"[WebsiteScraper] Fetching staff/leaders page: {staff_url}")
-            staff_info = await self.extract_from_url(staff_url, company_name, "staff/leaders")
-            if staff_info.get("founders") and staff_info["founders"] != 'Not Found':
-                result["founder_names"] = staff_info["founders"]
-        # Extract news from news/blog page
+        # Extract content from about, news, staff pages
+        if about_url and about_url != 'Not Found':
+            print(f"[WebsiteScraper] Fetching about page: {about_url}")
+            about_content = await self.extract_content_from_url(about_url, company_name, "about")
+            result["about_content"] = about_content
         if news_url and news_url != 'Not Found':
             print(f"[WebsiteScraper] Fetching news/blog page: {news_url}")
-            news_info = await self.extract_from_url(news_url, company_name, "news/blog")
-            if news_info.get("news") and news_info["news"] != 'Not Found':
-                result["news"] = news_info["news"]
-        # Optionally, extract more from about page if needed
-        # Save the main_info as website_summary
+            news_content = await self.extract_content_from_url(news_url, company_name, "news/blog")
+            result["news_content"] = news_content
+        if staff_url and staff_url != 'Not Found':
+            print(f"[WebsiteScraper] Fetching staff/leaders page: {staff_url}")
+            staff_content = await self.extract_content_from_url(staff_url, company_name, "staff/leaders")
+            result["staff_content"] = staff_content
+        # Save the main_info as website_summary (without *_url fields)
+        main_info.pop("about_url", None)
+        main_info.pop("news_url", None)
+        main_info.pop("staff_url", None)
         result["website_summary"] = main_info
         return result
 
