@@ -140,7 +140,7 @@ Extract the following information, using ONLY what is actually present in the te
 If any field is missing or uncertain, return only the text: Not Found for that field.
 
 Format your answer as a JSON object with the following structure:
-{
+{{
   "company_name": "...",
   "description": "...",
   "company_overview": "...",
@@ -148,12 +148,12 @@ Format your answer as a JSON object with the following structure:
   "founder_names": ["..."],
   "industry_categories": ["..."],
   "news": [
-    {"date": "...", "source": "...", "title": "...", "url": "..."},
+    {{"date": "...", "source": "...", "title": "...", "url": "..."}},
     ...
   ],
   "news_summary": "...",
   "website_summary": "..."
-}
+}}
 
 The extracted information will be used to write a personalized, engaging investor outreach email to the company.
 
