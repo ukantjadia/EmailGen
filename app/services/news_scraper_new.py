@@ -258,7 +258,7 @@ Return ONLY the JSON object, with no extra text, markdown, or explanation.
 
 def merge_company_data(existing, new):
     # Merge string fields: if both exist and are different, concatenate
-    for key in ["description", "company_overview", "headquarters_location", "news_summary", "website_summary"]:
+    for key in ["description", "company_overview", "headquarters_location", "news_summary", "website_summary", "about_content", "news_content", "staff_content"]:
         old = existing.get(key, "")
         new_val = new.get(key, "")
         if old and new_val and old != new_val:
@@ -267,16 +267,16 @@ def merge_company_data(existing, new):
             existing[key] = new_val
     # Merge lists: founders, news, industries
     for key in ["founder_names", "industry_categories"]:
-        old = set(existing.get(key, []))
-        new_items = set(new.get(key, []))
+        old = set(existing.get(key, []) or [])
+        new_items = set(new.get(key, []) or [])
         merged = list(old.union(new_items))
         existing[key] = merged
     # For news, merge by unique (title, url)
     if "news" in new:
-        old_news = existing.get("news", [])
-        old_set = {(n.get("title"), n.get("url")) for n in old_news}
+        old_news = existing.get("news", []) or []
+        old_set = {(n.get("title"), n.get("url")) for n in old_news if n}
         for n in new["news"]:
-            if (n.get("title"), n.get("url")) not in old_set:
+            if n and (n.get("title"), n.get("url")) not in old_set:
                 old_news.append(n)
         existing["news"] = old_news
     # For all other fields, update if not present
