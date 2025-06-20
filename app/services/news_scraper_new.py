@@ -111,48 +111,80 @@ class AsyncCompanyScraper:
 
         print(f"Total texts extracted: {len(texts)}")
 
-        if len(texts) >= 2:
-            news_text = texts[0] + texts[1]
-        elif len(texts) == 1:
-            news_text = texts[0]
+        if texts:
+            news_text = "".join(texts)
         else:
             news_text = "No news data"
-        print("88888888", news_text)
 
-        prompt = f"""
+        if news_text == "No news data" or not news_text.strip():
+            print("[Info] No news text found to analyze.")
+            return []
+
+        print(f"Total news text length: {len(news_text)}")
+
+        # Split text into chunks for concurrent processing
+        CHUNK_SIZE = 15000  # Characters per chunk
+        text_chunks = [news_text[i:i + CHUNK_SIZE] for i in range(0, len(news_text), CHUNK_SIZE)]
+        print(f"Splitting news text into {len(text_chunks)} chunks for parallel analysis.")
+
+        analysis_tasks = []
+        for i, chunk in enumerate(text_chunks):
+            prompt = f"""
 You are an intelligent extraction agent. Your job is to analyze raw text scraped from search engines about the company '{company_name}' in '{location}'.
 
-Extract ONLY the 5 most recent and detailed news items about the company. For each news item, provide:
+This is chunk {i+1} of {len(text_chunks)}.
+
+Extract ONLY the 5 most recent and detailed news items about the company from THIS CHUNK. For each news item, provide:
 - date (if available)
 - source (if available)
 - title (if available)
 - url (if available)
 - a detailed summary of the news item (if possible)
 
-Return your answer as a JSON array of news items, with each item as an object with keys: date, source, title, url, summary. Do NOT include any other fields or text. Do NOT use markdown or code blocks. Output only valid JSON.
+Return your answer as a JSON array of news items, with each item as an object with keys: date, source, title, url, summary. Do NOT include any other fields or text. Do NOT use markdown or code blocks. Output only valid JSON. If no news is found in this chunk, return an empty array [].
 
 Here is the text to analyze:
-{news_text}
+{chunk}
 """
+            analysis_tasks.append(self.get_chat_response(prompt))
 
-        news_summary = await self.get_chat_response(prompt)
-        print(f'-------{news_summary}')
-        # Remove markdown/code block wrappers
-        news_summary = re.sub(r"^```[a-zA-Z]*\s*", "", news_summary)
-        news_summary = re.sub(r"```\s*$", "", news_summary)
-        news_summary = news_summary.strip()
-        # Try to parse the LLM output as JSON
-        import json as _json
-        if not news_summary:
-            print("[Error] LLM output is empty!")
-            return []
-        try:
-            parsed = _json.loads(news_summary)
-        except Exception as e:
-            print(f"[Error] LLM output is not valid JSON: {e}")
-            print(f"[Error] Raw LLM output: {news_summary}")
-            parsed = []
-        return parsed
+        # Run concurrent LLM calls
+        summaries = await asyncio.gather(*analysis_tasks)
+
+        all_news = []
+        seen_news = set()
+
+        for i, summary_str in enumerate(summaries):
+            print(f'-------[Chunk {i+1} Analysis Result]-------\n{summary_str}')
+            # Clean up the response string
+            summary_str = re.sub(r"^```[a-zA-Z]*\s*", "", summary_str)
+            summary_str = re.sub(r"```\s*$", "", summary_str)
+            summary_str = summary_str.strip()
+
+            if not summary_str:
+                print(f"[Warning] LLM output for chunk {i+1} is empty.")
+                continue
+
+            try:
+                # The LLM should return a list of news items
+                news_items = json.loads(summary_str)
+                if isinstance(news_items, list):
+                    for item in news_items:
+                        # Deduplicate based on a unique identifier (e.g., title and url)
+                        if isinstance(item, dict):
+                            identifier = (item.get('title', '').strip(), item.get('url', '').strip())
+                            if all(identifier) and identifier not in seen_news:
+                                all_news.append(item)
+                                seen_news.add(identifier)
+                else:
+                    print(f"[Warning] LLM output for chunk {i+1} was not a list.")
+
+            except json.JSONDecodeError as e:
+                print(f"[Error] LLM output for chunk {i+1} is not valid JSON: {e}")
+                print(f"[Error] Raw LLM output for chunk {i+1}: {summary_str}")
+
+        print(f"Found {len(all_news)} unique news items after parallel analysis.")
+        return all_news
 
     async def save(self, df, folder='../data'):
         os.makedirs(folder, exist_ok=True)
