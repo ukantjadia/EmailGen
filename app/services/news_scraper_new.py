@@ -29,8 +29,8 @@ class AsyncCompanyScraper:
     async def fetch_page_text(self, page, url):
         try:
             await asyncio.sleep(random.uniform(1, 3))
-            await page.goto(url)
-            await page.wait_for_timeout(10000)
+            await page.goto(url, timeout=30000)  # 30 seconds
+            await page.wait_for_timeout(30000)   # 30 seconds
             await page.evaluate("""
             const contentDiv = document.querySelector('#b_content');
             if (contentDiv && contentDiv.style.visibility === 'hidden') {
@@ -87,19 +87,11 @@ class AsyncCompanyScraper:
 
         query_variants = [
             [  # Simple News Queries
-                # f'{query} news',
                 f'{query} latest news',
                 f'{query} recent news',
                 f'{query} management change',
                 f'{query} board member change',
-                # f'{query} new product',
-                # f'{query} new important person',
-                # f'{query} investment',
             ],
-            # [  # Simple Past Year News Queries
-            #     f'{query} news 2023',
-            #     f'{query} news 2024',
-            # ],
         ]
 
         urls = [f'https://www.bing.com/search?q={random.choice(group)}' for group in query_variants]
@@ -125,58 +117,41 @@ class AsyncCompanyScraper:
             news_text = texts[0]
         else:
             news_text = "No news data"
-        print("88888888",news_text)
+        print("88888888", news_text)
 
         prompt = f"""
 You are an intelligent extraction agent. Your job is to analyze raw text scraped from search engines about the company '{company_name}' in '{location}'.
 
-Extract the following information, using ONLY what is actually present in the text:
-- A concise company description or overview
-- Headquarters location (city, region, country if possible)
-- List of founders (names)
-- Industry categories
-- 5 recent news items in complete details only give news of 2025, or before July 2024 (with date/source if possible)
+Extract ONLY the 5 most recent and detailed news items about the company. For each news item, provide:
+- date (if available)
+- source (if available)
+- title (if available)
+- url (if available)
+- a detailed summary of the news item (if possible)
 
-If any field is missing or uncertain, return only the text: Not Found for that field.
+Return your answer as a JSON array of news items, with each item as an object with keys: date, source, title, url, summary. Do NOT include any other fields or text. Do NOT use markdown or code blocks. Output only valid JSON.
 
-Format your answer as a JSON object with the following structure:
-{{
-  "company_name": "...",
-  "description": "...",
-  "company_overview": "...",
-  "headquarters_location": "...",
-  "founder_names": ["..."],
-  "industry_categories": ["..."],
-  "news": [
-    {{"date": "...", "source": "...", "title": "...", "url": "..."}},
-    ...
-  ],
-  "news_summary": "...",
-  "website_summary": "..."
-}}
-
-The extracted information will be used to write a personalized, engaging investor outreach email to the company.
-Return ONLY the JSON object, with no extra text, markdown, or explanation.
-# Here is the text to analyze:
+Here is the text to analyze:
 {news_text}
 """
 
         news_summary = await self.get_chat_response(prompt)
         print(f'-------{news_summary}')
-        # After getting news_summary from the LLM
+        # Remove markdown/code block wrappers
+        news_summary = re.sub(r"^```[a-zA-Z]*\s*", "", news_summary)
+        news_summary = re.sub(r"```\s*$", "", news_summary)
         news_summary = news_summary.strip()
-        # Remove markdown code block if present
-        if news_summary.startswith("```"):
-            news_summary = re.sub(r"^```[a-zA-Z]*\\n?", "", news_summary)
-            news_summary = news_summary.rstrip("`").strip()
         # Try to parse the LLM output as JSON
         import json as _json
+        if not news_summary:
+            print("[Error] LLM output is empty!")
+            return []
         try:
             parsed = _json.loads(news_summary)
         except Exception as e:
             print(f"[Error] LLM output is not valid JSON: {e}")
             print(f"[Error] Raw LLM output: {news_summary}")
-            parsed = {company_name: news_summary if news_summary else "Not Found"}
+            parsed = []
         return parsed
 
     async def save(self, df, folder='../data'):
@@ -241,7 +216,7 @@ Return ONLY the JSON object, with no extra text, markdown, or explanation.
             async with semaphore:
                 name = company.get("Company", "NA")
                 result = await self.process_company(name, location)
-                return {**company, **result}
+                return {**company, **{"news": result}}
 
         tasks = []
         for i, company in enumerate(companies):
@@ -289,10 +264,10 @@ def scrape_and_save_news(company_name, location, json_path, api_key):
     from .news_scraper_new import AsyncCompanyScraper
     scraper = AsyncCompanyScraper(api_key=api_key)
     print("ino the scrap func... ")
-    result = asyncio.run(scraper.process_company(company_name, location))
+    news_items = asyncio.run(scraper.process_company(company_name, location))
 
-    # If result is a valid dict with the expected keys, merge and save it under the company name
-    if isinstance(result, dict) and "company_name" in result:
+    # Only merge the news field into the company data
+    if isinstance(news_items, list):
         # Load existing data if file exists
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as f:
@@ -302,16 +277,20 @@ def scrape_and_save_news(company_name, location, json_path, api_key):
                     all_data = {}
         else:
             all_data = {}
-        # Use the company_name as the key
-        key = result["company_name"] or company_name
+        key = company_name
         if key not in all_data:
             all_data[key] = {}
-        # Merge new data with existing data for the company
-        all_data[key] = merge_company_data(all_data[key], result)
+        # Merge news items
+        old_news = all_data[key].get("news", [])
+        old_set = {(n.get("title"), n.get("url")) for n in old_news if n}
+        for n in news_items:
+            if n and (n.get("title"), n.get("url")) not in old_set:
+                old_news.append(n)
+        all_data[key]["news"] = old_news
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(all_data, f, indent=2, ensure_ascii=False)
-        print(f"[✅ Success] News and company info for {key} saved to {json_path}")
-        return result
+        print(f"[✅ Success] News for {key} saved to {json_path}")
+        return news_items
     else:
         print(f"[❌ Error] LLM output was not valid JSON or missing expected keys. Not saving to {json_path}.")
-        return result
+        return news_items
