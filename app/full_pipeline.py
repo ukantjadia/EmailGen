@@ -6,9 +6,9 @@ from app.utils.config import JSON_FILE, EMBEDDINGS_PATH, SEARCH_FILE
 
 def run_pipeline(company_name, json_file=JSON_FILE, embeddings_path=EMBEDDINGS_PATH):
     # Build Crunchbase URL from company name
-    crunchbase_url = f"https://www.crunchbase.com/organization/{company_name.lower().replace(' ', '-')}"
+    # crunchbase_url = f"https://www.crunchbase.com/organization/{company_name.lower().replace(' ', '-')}"
     # Scrape company details and save to json_file
-    scrape_and_save_crunchbase_sync(crunchbase_url, json_file)
+    # scrape_and_save_crunchbase_sync(crunchbase_url, json_file)
     # Optionally, you can also call get_founders_info_and_save(json_file) here if needed
     scrape_and_save_news(company_name, "", SEARCH_FILE, "sk-")
     return generate_email(SEARCH_FILE, embeddings_path)

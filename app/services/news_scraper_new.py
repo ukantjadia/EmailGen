@@ -141,12 +141,12 @@ If any field is missing or uncertain, return only the text: Not Found for that f
 
 Format your answer as clear, labeled sections. The extracted information will be used to write a personalized, engaging investor outreach email to the company.
 
-# Here is the text to analyze:image.png
+# Here is the text to analyze:
 {news_text}
 """
 
         news_summary = await self.get_chat_response(prompt)
-
+        print(f'-------{news_summary}')
         return {
             "Company": company_name,
             "Recent News": news_summary if news_summary else "Not Found",
