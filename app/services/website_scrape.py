@@ -49,7 +49,16 @@ class WebsiteScraper:
             await page.wait_for_timeout(5000)
             html = await page.content()
             await browser.close()
-            return html[:200_000]  # Limit to 200k chars for LLM
+            # Only extract <body> content to reduce size
+            soup = BeautifulSoup(html, "lxml")
+            body = soup.body
+            if body:
+                html = str(body)
+            print(f"total len of html body is {len(html)}")
+            # Further limit to first 30,000 characters
+            html = html[:30000]
+            print(f"[WebsiteScraper] Sending {len(html)} characters of HTML to LLM.")
+            return html
 
     async def extract_main_info(self, company_name, website_url, html):
         prompt = f"""
